@@ -26,3 +26,4 @@ _testmain.go
 # Custom files
 config.yml
 data/
+.vscode/
