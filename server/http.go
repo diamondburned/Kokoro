@@ -45,8 +45,15 @@ func StartServer(host string, port int16) {
 	r.Use(unknownWeb)
 
 	r.HandleFunc("/{avatar}", handler.GETAvatar)
+	r.HandleFunc("/ss/{screenshot}", handler.GETScreenshot)
+	r.HandleFunc("/web/osu-screenshot.php", handler.POSTScreenshot)
+
 	r.HandleFunc("/web/osu-search.php", handler.SearchDirect)
 	r.HandleFunc("/web/osu-search-set.php", handler.GETDirectSet)
+
+	r.HandleFunc("/web/osu-submit-modular.php", handler.POSTSubmitModular)
+	r.HandleFunc("/web/osu-osz2-getscores.php", handler.GETScoreboard)
+
 	r.HandleFunc("/web/{web}", webFolder)
 
 	logger.Info(" Kokoro is listening on port %v\n", port)
