@@ -45,6 +45,14 @@ func main() {
 	}
 	defer handler.CLIENT.Close()
 
+	if _, err := os.Stat("data"); os.IsNotExist(err) {
+		os.Mkdir("data", os.ModePerm)
+	}
+
+	if _, err := os.Stat("data/screenshots"); os.IsNotExist(err) {
+		os.Mkdir("data/screenshots", os.ModePerm)
+	}
+
 	os.Setenv("DEBUG", strconv.FormatBool(conf.Server.Debug))
 	os.Setenv("CHEESEGULL", conf.CheeseGull.APIUrl)
 
