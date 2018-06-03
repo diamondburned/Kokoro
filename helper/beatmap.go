@@ -36,3 +36,11 @@ type ChildrenBeatmaps struct {
 	MaxCombo         int32   `json:"MaxCombo"`
 	DifficultyRating float64 `json:"DifficultyRating"`
 }
+
+func NewBeatmap() *Beatmap {
+	return &Beatmap{}
+}
+
+func NewChildrenBeatmap() *ChildrenBeatmaps {
+	return &ChildrenBeatmaps{}
+}

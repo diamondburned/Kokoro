@@ -5,7 +5,10 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/go-redis/redis"
+
 	"github.com/Gigamons/Kokoro/constants"
+	"github.com/Gigamons/Kokoro/handler"
 	"github.com/Gigamons/Kokoro/server"
 	"github.com/Gigamons/common/consts"
 	"github.com/Gigamons/common/helpers"
@@ -31,6 +34,16 @@ func main() {
 		panic(err)
 	}
 	defer helpers.DB.Close()
+
+	handler.CLIENT = redis.NewClient(&redis.Options{
+		Addr: fmt.Sprintf("%s:%v", conf.Redis.Hostname, conf.Redis.Port),
+	})
+
+	if _, err := handler.CLIENT.Ping().Result(); err != nil {
+		logger.Error("Could not connect to Redis Server!")
+		return
+	}
+	defer handler.CLIENT.Close()
 
 	os.Setenv("DEBUG", strconv.FormatBool(conf.Server.Debug))
 	os.Setenv("CHEESEGULL", conf.CheeseGull.APIUrl)

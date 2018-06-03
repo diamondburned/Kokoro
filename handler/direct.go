@@ -5,20 +5,18 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Gigamons/common/logger"
+
 	"github.com/Gigamons/Kokoro/helper"
 )
 
 func SearchDirect(w http.ResponseWriter, r *http.Request) {
-	RankedStatus := r.URL.Query()["r"]
-	Query := r.URL.Query()["q"]
-	Page := r.URL.Query()["p"]
-	Mode := r.URL.Query()["m"]
-	fmt.Println(r.URL.Query())
+	RankedStatus := r.URL.Query().Get("r")
+	Query := r.URL.Query().Get("q")
+	Page := r.URL.Query().Get("p")
+	Mode := r.URL.Query().Get("m")
 
 	if len(RankedStatus) < 1 {
-		return
-	}
-	if len(Query) < 1 {
 		return
 	}
 	if len(Page) < 1 {
@@ -28,21 +26,75 @@ func SearchDirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if b, err := GetCache(RankedStatus + Page + Mode + Query); len(b) > 0 {
+		if err != nil {
+			logger.Error(err.Error())
+		} else {
+			w.Write(b)
+			return
+		}
+	}
+
 	var err error
 	var rs int
 	var p int
 	var m int
-	if rs, err = strconv.Atoi(RankedStatus[0]); err != nil {
+	if rs, err = strconv.Atoi(RankedStatus); err != nil {
 		return
 	}
-	if p, err = strconv.Atoi(Page[0]); err != nil {
+	if p, err = strconv.Atoi(Page); err != nil {
 		return
 	}
-	if m, err = strconv.Atoi(RankedStatus[0]); err != nil {
+	if m, err = strconv.Atoi(RankedStatus); err != nil {
 		return
 	}
 
-	_Cheese := helper.CheeseGull{Query: Query[0], PlayMode: int8(m), RankedStatus: int8(rs), Page: int32(p)}
+	_Cheese := helper.CheeseGull{Query: Query, PlayMode: int8(m), RankedStatus: int8(rs), Page: int32(p)}
 
-	w.Write([]byte(_Cheese.ToDirect()))
+	out := _Cheese.ToDirect()
+	fmt.Fprint(w, out)
+	SetCache(RankedStatus+Page+Mode+Query, []byte(out))
+}
+
+func GETDirectSet(w http.ResponseWriter, r *http.Request) {
+	SetID := r.URL.Query().Get("s")
+	BeatmapID := r.URL.Query().Get("b")
+
+	if b, err := GetCache(SetID + BeatmapID); len(b) > 0 {
+		if err != nil {
+			logger.Error(err.Error())
+		} else {
+			w.Write(b)
+			return
+		}
+	}
+
+	if SetID == "" {
+		SetID = "0"
+	}
+
+	if BeatmapID == "" {
+		BeatmapID = "0"
+	}
+
+	sid, err := strconv.Atoi(SetID)
+	if err != nil {
+		return
+	}
+	bid, err := strconv.Atoi(BeatmapID)
+	if err != nil {
+		return
+	}
+
+	_Cheese := helper.CheeseGull{}
+
+	out := _Cheese.ToNP(sid, bid)
+
+	SetCache(BeatmapID+SetID, []byte(out))
+
+	if out == "0" {
+		return
+	}
+
+	fmt.Fprint(w, out)
 }

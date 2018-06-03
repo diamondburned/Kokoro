@@ -84,6 +84,59 @@ func (c *CheeseGull) _search() {
 	c.Beatmap = CheeseGullAnswer
 }
 
+func (c *CheeseGull) GetSet(SetID int) *Beatmap {
+	api, err := http.Get(os.Getenv("CHEESEGULL") + "/s/" + strconv.Itoa(SetID))
+	if err != nil {
+		logger.Error(err.Error())
+		fmt.Println(err)
+		return nil
+	}
+	if api == nil {
+		logger.Error("URL not Valid!")
+		return nil
+	}
+	defer api.Body.Close()
+	body, err := ioutil.ReadAll(api.Body)
+	if err != nil {
+		logger.Error(err.Error())
+		fmt.Println(err)
+		return nil
+	}
+	CheeseGullAnswer := NewBeatmap()
+	if err = json.Unmarshal(body, CheeseGullAnswer); err != nil {
+		logger.Error(err.Error())
+		fmt.Println(err)
+		return nil
+	}
+
+	return CheeseGullAnswer
+}
+
+func (c *CheeseGull) GetBeatmap(BeatmapID int) *ChildrenBeatmaps {
+	api, err := http.Get(os.Getenv("CHEESEGULL") + "/b/" + strconv.Itoa(BeatmapID))
+	if err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+	if api == nil {
+		logger.Error("URL not Valid!")
+		return nil
+	}
+	defer api.Body.Close()
+	body, err := ioutil.ReadAll(api.Body)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+	CheeseGullAnswer := NewChildrenBeatmap()
+	if err = json.Unmarshal(body, &CheeseGullAnswer); err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+
+	return CheeseGullAnswer
+}
+
 func (c *CheeseGull) ToDirect() string {
 	c._search()
 	OutputString := ""
@@ -163,5 +216,45 @@ func (c *CheeseGull) ToDirect() string {
 		OutputString = "0\n"
 	}
 	OutputString += "|"
+	return OutputString
+}
+
+func (c *CheeseGull) ToNP(SetID int, BeatmapID int) string {
+	Set := c.GetSet(SetID)
+	Beatmap := c.GetBeatmap(BeatmapID)
+	OutputString := ""
+
+	if Set == nil && Beatmap == nil {
+		return "0"
+	}
+
+	if Beatmap != nil {
+		Set = c.GetSet(int(Beatmap.ParentSetID))
+	}
+
+	if Set != nil {
+		OutputString = fmt.Sprintf("%v.osz|%s|%s|%s|%v|10.00|%s|%v|%v|%s|0|1234|%s\r\n",
+			Set.SetID,
+			Set.Artist,
+			Set.Title,
+			Set.Creator,
+			Set.RankedStatus,
+			Set.LastUpdate,
+			Set.SetID,
+			Set.SetID,
+			func() string {
+				if Set.HasVideo {
+					return "1"
+				}
+				return "0"
+			}(),
+			func() string {
+				if Set.HasVideo {
+					return "4321"
+				}
+				return ""
+			}(),
+		)
+	}
 	return OutputString
 }
