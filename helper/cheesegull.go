@@ -137,6 +137,31 @@ func (c *CheeseGull) GetBeatmap(BeatmapID int) *ChildrenBeatmaps {
 	return CheeseGullAnswer
 }
 
+func (c *CheeseGull) GetBeatmapByHash(FileMD5 string) *ChildrenBeatmaps {
+	api, err := http.Get(os.Getenv("CHEESEGULL") + "/hash/" + FileMD5)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+	if api == nil {
+		logger.Error("URL not Valid!")
+		return nil
+	}
+	defer api.Body.Close()
+	body, err := ioutil.ReadAll(api.Body)
+	if err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+	CheeseGullAnswer := NewChildrenBeatmap()
+	if err = json.Unmarshal(body, &CheeseGullAnswer); err != nil {
+		logger.Error(err.Error())
+		return nil
+	}
+
+	return CheeseGullAnswer
+}
+
 func (c *CheeseGull) ToDirect() string {
 	c._search()
 	OutputString := ""
