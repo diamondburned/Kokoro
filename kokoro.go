@@ -43,6 +43,7 @@ func main() {
 		logger.Error("Could not connect to Redis Server!")
 		return
 	}
+	handler.CLIENT.FlushAll()
 	defer handler.CLIENT.Close()
 
 	if _, err := os.Stat("data"); os.IsNotExist(err) {
@@ -51,6 +52,10 @@ func main() {
 
 	if _, err := os.Stat("data/screenshots"); os.IsNotExist(err) {
 		os.Mkdir("data/screenshots", os.ModePerm)
+	}
+
+	if _, err := os.Stat("data/map"); os.IsNotExist(err) {
+		os.Mkdir("data/map", os.ModePerm)
 	}
 
 	os.Setenv("DEBUG", strconv.FormatBool(conf.Server.Debug))
