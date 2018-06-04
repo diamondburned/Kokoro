@@ -2,6 +2,7 @@ package helper
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/Gigamons/common/consts"
 	"github.com/Gigamons/common/logger"
@@ -13,9 +14,9 @@ type Beatmap struct {
 	SetID            int64              `json:"SetID"`
 	ChildrenBeatmaps []ChildrenBeatmaps `json:"ChildrenBeatmaps"`
 	RankedStatus     int8               `json:"RankedStatus"`
-	ApprovedDate     string             `json:"ApprovedDate"`
-	LastUpdate       string             `json:"LastUpdate"`
-	LastChecked      string             `json:"LastChecked"`
+	ApprovedDate     time.Time          `json:"ApprovedDate"`
+	LastUpdate       time.Time          `json:"LastUpdate"`
+	LastChecked      time.Time          `json:"LastChecked"`
 	Artist           string             `json:"Artist"`
 	Title            string             `json:"Title"`
 	Creator          string             `json:"Creator"`
@@ -56,8 +57,8 @@ func NewChildrenBeatmap() *ChildrenBeatmaps {
 
 func BeatmapExists(FileMD5 string, BeatmapID int) (bool, bool) {
 	var exists, needupdate bool
-	helpers.DB.QueryRow("SELECT * FROM beatmaps WHERE FileMD5 = ?", FileMD5).Scan(&exists)
-	helpers.DB.QueryRow("SELECT * FROM beatmaps WHERE BeatmapID = ?", BeatmapID).Scan(&needupdate)
+	helpers.DB.QueryRow("SELECT EXISTS (SELECT SetID FROM beatmaps WHERE FileMD5 = ?)", FileMD5).Scan(&exists)
+	helpers.DB.QueryRow("SELECT EXISTS (SELECT SetID FROM beatmaps WHERE BeatmapID = ? AND FileMD5 != ?)", BeatmapID, FileMD5).Scan(&needupdate)
 	return exists, needupdate
 }
 
@@ -65,15 +66,13 @@ func AddBeatmap(BM *Beatmap) {
 	for i := 0; i < len(BM.ChildrenBeatmaps); i++ {
 		child := BM.ChildrenBeatmaps[i]
 		exists, needupdate := BeatmapExists(child.FileMD5, int(child.BeatmapID))
-		if exists {
-			continue
-		}
 		if needupdate {
 			UpdateBeatmap(BM)
 			continue
 		}
-
-		fmt.Println(BM.RankedStatus + 1)
+		if exists {
+			continue
+		}
 
 		_, err := helpers.DB.Exec(`
 			INSERT INTO beatmaps 
@@ -94,12 +93,14 @@ func AddBeatmap(BM *Beatmap) {
 				HP,
 				BPM,
 				HitLength,
+				TotalLength,
 				DiffName,
 				PlayMode,
-				MaxCombo
+				MaxCombo,
+				PlayCount
 			)
 			VALUES
-			(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
 			`,
 			BM.SetID,
 			child.BeatmapID,
@@ -114,6 +115,7 @@ func AddBeatmap(BM *Beatmap) {
 			child.CS, child.OD, child.AR, child.HP,
 			child.BPM,
 			child.HitLength,
+			child.TotalLength,
 			child.DiffName,
 			child.Mode,
 			child.MaxCombo,
@@ -195,12 +197,12 @@ type DBBeatmap struct {
 	Title        string
 	Creator      string
 	LastUpdate   string
-	Difficulty   int
-	CS           int
-	OD           int
-	AR           int
-	HP           int
-	BPM          int
+	Difficulty   float64
+	CS           float32
+	OD           float32
+	AR           float32
+	HP           float32
+	BPM          float32
 	HitLength    int
 	DiffName     string
 	PlayMode     int
@@ -210,29 +212,11 @@ type DBBeatmap struct {
 func GetBeatmapofDB(BeatmapID int) *DBBeatmap {
 
 	rows, err := helpers.DB.Query(`
-		SELECT 
-			SetID,
-			BeatmapID,
-			FileMD5,
-			RankedStatus,
-			RankedDate,
-			Artist,
-			Title,
-			Creator,
-			LastUpdate,
-			Difficulty,
-			CS,
-			OD,
-			AR,
-			HP,
-			BPM,
-			HitLength,
-			DiffName,
-			PlayMode,
-			MaxCombo,
+		SELECT SetID, BeatmapID, FileMD5, RankedStatus, RankedDate, Artist, Title, Creator, LastUpdate, Difficulty, CS, OD, AR, HP, BPM, HitLength, DiffName, PlayMode, MaxCombo
 		FROM beatmaps WHERE BeatmapID = ?`, BeatmapID)
 
 	if err != nil {
+		fmt.Println(err)
 		return nil
 	}
 
@@ -240,25 +224,69 @@ func GetBeatmapofDB(BeatmapID int) *DBBeatmap {
 
 	for rows.Next() {
 		err := rows.Scan(
-			bmDB.SetID,
-			bmDB.BeatmapID,
-			bmDB.FileMD5,
-			bmDB.RankedStatus,
-			bmDB.RankedDate,
-			bmDB.Artist,
-			bmDB.Title,
-			bmDB.Creator,
-			bmDB.LastUpdate,
-			bmDB.Difficulty,
-			bmDB.CS,
-			bmDB.OD,
-			bmDB.AR,
-			bmDB.HP,
-			bmDB.BPM,
-			bmDB.HitLength,
-			bmDB.DiffName,
-			bmDB.PlayMode,
-			bmDB.MaxCombo,
+			&bmDB.SetID,
+			&bmDB.BeatmapID,
+			&bmDB.FileMD5,
+			&bmDB.RankedStatus,
+			&bmDB.RankedDate,
+			&bmDB.Artist,
+			&bmDB.Title,
+			&bmDB.Creator,
+			&bmDB.LastUpdate,
+			&bmDB.Difficulty,
+			&bmDB.CS,
+			&bmDB.OD,
+			&bmDB.AR,
+			&bmDB.HP,
+			&bmDB.BPM,
+			&bmDB.HitLength,
+			&bmDB.DiffName,
+			&bmDB.PlayMode,
+			&bmDB.MaxCombo,
+		)
+		if err != nil {
+			logger.Error(err.Error())
+		}
+	}
+	defer rows.Close()
+
+	return bmDB
+}
+
+func GetBeatmapofDBHash(FileMD5 string) *DBBeatmap {
+
+	rows, err := helpers.DB.Query(`
+		SELECT SetID, BeatmapID, FileMD5, RankedStatus, RankedDate, Artist, Title, Creator, LastUpdate, Difficulty, CS, OD, AR, HP, BPM, HitLength, DiffName, PlayMode, MaxCombo
+		FROM beatmaps WHERE FileMD5 = ?`, FileMD5)
+
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+
+	bmDB := &DBBeatmap{}
+
+	for rows.Next() {
+		err := rows.Scan(
+			&bmDB.SetID,
+			&bmDB.BeatmapID,
+			&bmDB.FileMD5,
+			&bmDB.RankedStatus,
+			&bmDB.RankedDate,
+			&bmDB.Artist,
+			&bmDB.Title,
+			&bmDB.Creator,
+			&bmDB.LastUpdate,
+			&bmDB.Difficulty,
+			&bmDB.CS,
+			&bmDB.OD,
+			&bmDB.AR,
+			&bmDB.HP,
+			&bmDB.BPM,
+			&bmDB.HitLength,
+			&bmDB.DiffName,
+			&bmDB.PlayMode,
+			&bmDB.MaxCombo,
 		)
 		if err != nil {
 			logger.Error(err.Error())
@@ -274,7 +302,7 @@ func (bm *ChildrenBeatmaps) GetHeader(TotalScores int) string {
 	if db == nil {
 		return fmt.Sprintf("%v|false", consts.LatestPending)
 	}
-	return fmt.Sprintf("%v|true|%v|%v|%v\n%v\n%s\n%v\n", db.RankedStatus, bm.BeatmapID, bm.ParentSetID, TotalScores, 0, db.Title, 10.00)
+	return fmt.Sprintf("%v|false|%v|%v|%v\n%v\n%s\n%v.0\n", db.RankedStatus, bm.BeatmapID, bm.ParentSetID, TotalScores, 0, db.Artist+" - "+db.Title+" ["+db.DiffName+"]", 10)
 }
 
 func FixRankedStatus(r int8) int8 {
@@ -291,4 +319,20 @@ func FixRankedStatus(r int8) int8 {
 		out = consts.LatestPending
 	}
 	return out
+}
+
+func (bm *DBBeatmap) IsRanked() bool {
+	if bm.RankedStatus == consts.Ranked || bm.RankedStatus == consts.Approved {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (bm *DBBeatmap) IsLoved() bool {
+	if bm.RankedStatus == consts.Loved || bm.RankedStatus == consts.Qualified {
+		return true
+	} else {
+		return false
+	}
 }
