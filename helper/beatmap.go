@@ -290,19 +290,19 @@ func GetBeatmapofDBHash(FileMD5 string) *DBBeatmap {
 		)
 		if err != nil {
 			logger.Error(err.Error())
+			return nil
 		}
 	}
 	defer rows.Close()
+	if bmDB.FileMD5 == "" {
+		return nil
+	}
 
 	return bmDB
 }
 
-func (bm *ChildrenBeatmaps) GetHeader(TotalScores int) string {
-	db := GetBeatmapofDB(int(bm.BeatmapID))
-	if db == nil {
-		return fmt.Sprintf("%v|false", consts.LatestPending)
-	}
-	return fmt.Sprintf("%v|false|%v|%v|%v\n%v\n%s\n%v.0\n", db.RankedStatus, bm.BeatmapID, bm.ParentSetID, TotalScores, 0, db.Artist+" - "+db.Title+" ["+db.DiffName+"]", 10)
+func (bm *DBBeatmap) GetHeader(TotalScores int) string {
+	return fmt.Sprintf("%v|false|%v|%v|%v\n%v\n%s\n%v.0\n", bm.RankedStatus, bm.BeatmapID, bm.SetID, TotalScores, 0, bm.Artist+" - "+bm.Title+" ["+bm.DiffName+"]", 10)
 }
 
 func FixRankedStatus(r int8) int8 {
@@ -322,7 +322,7 @@ func FixRankedStatus(r int8) int8 {
 }
 
 func (bm *DBBeatmap) IsRanked() bool {
-	if bm.RankedStatus == consts.Ranked || bm.RankedStatus == consts.Approved {
+	if bm.RankedStatus == consts.Ranked || bm.RankedStatus == consts.Approved || bm.RankedStatus == consts.Qualified {
 		return true
 	} else {
 		return false
