@@ -11,6 +11,11 @@ type Config struct {
 		Port     int16
 		Debug    bool
 	}
+	API struct {
+		KaoijiHost   string
+		KaoijiAPIKey string
+		APIKey       string
+	}
 	CheeseGull struct {
 		APIUrl string
 	}
