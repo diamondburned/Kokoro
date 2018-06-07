@@ -11,13 +11,14 @@ import (
 type Cache struct {
 	CacheHash   string
 	DeleteCache time.Time
+	Timeout     int64
 }
 
 var CLIENT *redis.Client
 var CACHED []*Cache
 
-func SetCache(CacheKey string, CacheData []byte) *Cache {
-	C := &Cache{CacheHash: hex.EncodeToString(md5.New().Sum([]byte(CacheKey))), DeleteCache: time.Now()}
+func SetCache(CacheKey string, CacheData []byte, Timeout int64) *Cache {
+	C := &Cache{CacheHash: hex.EncodeToString(md5.New().Sum([]byte(CacheKey))), DeleteCache: time.Now(), Timeout: Timeout}
 	if CLIENT.HSet(C.CacheHash, "Data", CacheData).Err() != nil {
 		return nil
 	}
@@ -53,7 +54,7 @@ func StartCacheCheck() {
 	go func() {
 		for {
 			for i := 0; i < len(CACHED); i++ {
-				if CACHED[i].DeleteCache.Unix() < time.Now().Unix()-60 {
+				if CACHED[i].DeleteCache.Unix() < time.Now().Unix()-CACHED[i].Timeout {
 					CLIENT.HDel(CACHED[i].CacheHash, "Data")
 					copy(CACHED[i:], CACHED[i+1:])
 					CACHED[len(CACHED)-1] = nil
