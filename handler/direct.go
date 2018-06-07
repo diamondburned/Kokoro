@@ -53,7 +53,7 @@ func SearchDirect(w http.ResponseWriter, r *http.Request) {
 
 	out := _Cheese.ToDirect()
 	fmt.Fprint(w, out)
-	SetCache(RankedStatus+Page+Mode+Query, []byte(out))
+	SetCache(RankedStatus+Page+Mode+Query, []byte(out), 60)
 }
 
 func GETDirectSet(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +90,7 @@ func GETDirectSet(w http.ResponseWriter, r *http.Request) {
 
 	out := _Cheese.ToNP(sid, bid)
 
-	SetCache(BeatmapID+SetID, []byte(out))
+	SetCache(BeatmapID+SetID, []byte(out), 60)
 
 	if out == "0" {
 		return
