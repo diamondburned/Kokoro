@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -239,13 +240,10 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 				logger.Error(err.Error())
 				return
 			}
+			CalculateUser(int(User.ID), ScoreData.Mods&128 > 0, int8(ScoreData.PlayMode))
 		} else {
 			increaseTotalScore(User, ScoreData.Score, ScoreData.PlayMode)
 			increasePlaycount(User, ScoreData.PlayMode)
-			increaseCount300(User, ScoreData.Count300, ScoreData.PlayMode)
-			increaseCount100(User, ScoreData.Count100, ScoreData.PlayMode)
-			increaseCount50(User, ScoreData.Count50, ScoreData.PlayMode)
-			increaseCountMiss(User, ScoreData.CountMiss, ScoreData.PlayMode)
 			fmt.Fprintf(w, "ok")
 		}
 	} else {
@@ -345,6 +343,35 @@ func increaseRankedScore(u *consts.User, Score int, playMode int) {
 	helpers.DB.Exec("UPDATE leaderboard SET rankedscore_"+consts.ToPlaymodeString(int8(playMode))+" = rankedscore_"+consts.ToPlaymodeString(int8(playMode))+" + ? WHERE id = ?", Score, u.ID)
 }
 
-func CalculateUser() {
-
+func CalculateUser(UserID int, relaxing bool, playMode int8) {
+	var TotalPP float64
+	Query := "SELECT PeppyPoints FROM scores WHERE UserID = ? AND PlayMode = ? "
+	if relaxing {
+		Query += "AND (scores.mods & 128 > 0) "
+	} else {
+		Query += "AND (scores.mods & 128 < 0) "
+	}
+	Query += " GROUP BY FileMD5 ORDER BY MAX(scores.Score) DESC"
+	rows, err := helpers.DB.Query(Query, UserID, playMode)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	var CurrentRow float64
+	for rows.Next() {
+		var PeppyPoints float64
+		err := rows.Scan(&PeppyPoints)
+		if err != nil {
+			logger.Error(err.Error())
+		}
+		TotalPP += math.Pow(PeppyPoints * 0.95, CurrentRow)
+		CurrentRow = CurrentRow + 1.0
+	}
+	m := func() string {
+		if relaxing {
+			return "_rx"
+		} else {
+			return ""
+		}
+	}()
+	helpers.DB.Exec("UPDATE leaderboard"+m+" SET pp_"+consts.ToPlaymodeString(playMode)+"= ? WHERE id = ?", TotalPP, UserID)
 }
