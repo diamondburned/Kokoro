@@ -151,10 +151,10 @@ func (sb *Scoreboard) DisplayScoreboard(w http.ResponseWriter) {
 func (sb *Scoreboard) _SetPersonalBest() {
 	QueryString := "SELECT * FROM scores WHERE UserID = ? AND FileMD5 = ? AND PlayMode = ? "
 
-	if sb.Mods&128 > 0 {
-		QueryString += "AND (mods & 128 > 0) "
+	if sb.Mods&128 > 0 || sb.Mods&8192 > 0 {
+		QueryString += "AND (Mods & 128 != 0 OR Mods & 8192 != 0) "
 	} else {
-		QueryString += "AND (mods & 128 < 0) "
+		QueryString += "AND (Mods & 128 = 0 AND Mods & 8192 = 0) "
 	}
 	QueryString += " ORDER BY score DESC LIMIT 1"
 
@@ -292,7 +292,7 @@ func (sb *Scoreboard) _SetScores() {
 
 func (sb *Scoreboard) _SetScoreIDs() {
 	sb._SetFriends()
-	QueryString := "SELECT ScoreID, MAX(Score) FROM scores STRAIGHT_JOIN users ON scores.UserID = users.id STRAIGHT_JOIN users_status ON users.id = users_status.id WHERE scores.FileMD5 = ? AND scores.PlayMode = ? AND (users_status.banned < 1 OR users.id = ?) "
+	QueryString := "SELECT ScoreID FROM scores STRAIGHT_JOIN users ON scores.UserID = users.id STRAIGHT_JOIN users_status ON users.id = users_status.id WHERE scores.FileMD5 = ? AND scores.PlayMode = ? AND (users_status.banned < 1 OR users.id = ?) "
 	if sb.ScoreboardType == 4 {
 		QueryString += "AND users_status.country = (SELECT country FROM users_status WHERE id = ? LIMIT 1) "
 	}
@@ -302,10 +302,10 @@ func (sb *Scoreboard) _SetScoreIDs() {
 	if sb.ScoreboardType == 3 {
 		QueryString += "AND (scores.UserID IN (SELECT friendid FROM friends WHERE userid = ?) OR scores.UserID = ?) "
 	}
-	if sb.Mods&128 > 0 {
-		QueryString += "AND (scores.Mods & 128 > 0) "
+	if sb.Mods&128 > 0 || sb.Mods&8192 > 0 {
+		QueryString += "AND (scores.Mods & 128 != 0 OR scores.Mods & 8192 != 0) "
 	} else {
-		QueryString += "AND (scores.Mods & 128 < 1) "
+		QueryString += "AND (scores.Mods & 128 = 0 AND scores.Mods & 8192 = 0) "
 	}
 	QueryString += "GROUP BY UserID ORDER BY MAX(scores.Score) DESC LIMIT 100"
 
@@ -317,8 +317,7 @@ func (sb *Scoreboard) _SetScoreIDs() {
 	}
 	for Query.Next() {
 		var s uint32
-		var f uint64
-		if err := Query.Scan(&s, &f); err != nil {
+		if err := Query.Scan(&s); err != nil {
 			fmt.Println(err)
 		} else {
 			sb.ScoreIDs = append(sb.ScoreIDs, &s)
