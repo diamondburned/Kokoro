@@ -1,9 +1,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/Gigamons/Kokoro/calculate"
 
 	"github.com/go-redis/redis"
 
@@ -60,6 +63,15 @@ func main() {
 
 	os.Setenv("DEBUG", strconv.FormatBool(conf.Server.Debug))
 	os.Setenv("CHEESEGULL", conf.CheeseGull.APIUrl)
+
+	i := flag.Int("recalculate", -1, "RECalculate a User based on his Userid, 0 = All")
+	s := flag.Bool("scores", false, "RECalculates All Scores. (Can only be used with -recalculate=0)")
+	flag.Parse()
+
+	if *i >= 0 {
+		calculate.RecalculateUser(*i, *s)
+		return
+	}
 
 	server.StartServer(conf.Server.Hostname, conf.Server.Port)
 }

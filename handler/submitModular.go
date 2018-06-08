@@ -9,11 +9,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"math"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Gigamons/Kokoro/calculate"
 	"github.com/Gigamons/Kokoro/helper"
 	oppai "github.com/Gigamons/oppai5"
 
@@ -240,7 +240,47 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 				logger.Error(err.Error())
 				return
 			}
-			CalculateUser(int(User.ID), ScoreData.Mods&128 > 0, int8(ScoreData.PlayMode))
+			//LeaderboardOLD := usertools.GetLeaderboard(*User, int8(ScoreData.PlayMode))
+			calculate.CalculateUser(int(User.ID), ScoreData.Mods&consts.ModsRX != 0 || ScoreData.Mods&consts.ModsRX2 != 0, int8(ScoreData.PlayMode))
+			//LeaderboardNEW := usertools.GetLeaderboard(*User, int8(ScoreData.PlayMode))
+			outputstring := ""
+			/* --- Beatmap --- */
+			outputstring += "beatmapid:" + strconv.Itoa(Beatmap.BeatmapID) + "|"
+			outputstring += "beatmapSetId:" + strconv.Itoa(Beatmap.SetID) + "|"
+			outputstring += "beatmapSetId:" + strconv.Itoa(Beatmap.SetID) + "|"
+			outputstring += "beatmapPlaycount:0|"
+			outputstring += "beatmapPasscount:0|"
+			outputstring += "approvedDate:" + Beatmap.RankedDate + "\n"
+			/* --- Charts --- */
+			outputstring += "chartId:overall|"
+			if ScoreData.Mods&consts.ModsRX != 0 || ScoreData.Mods&consts.ModsRX2 != 0 {
+				outputstring += "chartName:Relax Ranking|"
+			} else {
+				outputstring += "chartName:Overall Ranking|"
+			}
+			outputstring += "chartEndDate:|"
+			/* --- Ranking --- */
+			outputstring += "beatmapRankingBefore:0|"
+			outputstring += "beatmapRankingAfter:0|"
+			outputstring += "rankedScoreBefore:0|"
+			outputstring += "rankedScoreAfter:0|"
+			outputstring += "totalScoreBefore:0|"
+			outputstring += "totalScoreAfter:0|"
+			outputstring += "playCountBefore:0|"
+			outputstring += "accuracyBefore:0|"
+			outputstring += "accuracyAfter:0|"
+			outputstring += "rankBefore:0|"
+			outputstring += "rankAfter:0|"
+			outputstring += "toNextRank:0|"
+			outputstring += "toNextRankUser:0|"
+			/* --- Stats --- */
+			outputstring += "achievements:|"
+			outputstring += "achievements-new:|"
+			outputstring += "onlineScoreId:0|"
+			outputstring += "\n"
+
+			fmt.Println(outputstring)
+			fmt.Fprint(w, outputstring)
 		} else {
 			increaseTotalScore(User, ScoreData.Score, ScoreData.PlayMode)
 			increasePlaycount(User, ScoreData.PlayMode)
@@ -341,37 +381,4 @@ func increaseTotalScore(u *consts.User, Score int, playMode int) {
 
 func increaseRankedScore(u *consts.User, Score int, playMode int) {
 	helpers.DB.Exec("UPDATE leaderboard SET rankedscore_"+consts.ToPlaymodeString(int8(playMode))+" = rankedscore_"+consts.ToPlaymodeString(int8(playMode))+" + ? WHERE id = ?", Score, u.ID)
-}
-
-func CalculateUser(UserID int, relaxing bool, playMode int8) {
-	var TotalPP float64
-	Query := "SELECT PeppyPoints FROM scores WHERE UserID = ? AND PlayMode = ? "
-	if relaxing {
-		Query += "AND (scores.mods & 128 > 0) "
-	} else {
-		Query += "AND (scores.mods & 128 < 0) "
-	}
-	Query += " GROUP BY FileMD5 ORDER BY MAX(scores.Score) DESC"
-	rows, err := helpers.DB.Query(Query, UserID, playMode)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-	var CurrentRow float64
-	for rows.Next() {
-		var PeppyPoints float64
-		err := rows.Scan(&PeppyPoints)
-		if err != nil {
-			logger.Error(err.Error())
-		}
-		TotalPP += math.Pow(PeppyPoints * 0.95, CurrentRow)
-		CurrentRow = CurrentRow + 1.0
-	}
-	m := func() string {
-		if relaxing {
-			return "_rx"
-		} else {
-			return ""
-		}
-	}()
-	helpers.DB.Exec("UPDATE leaderboard"+m+" SET pp_"+consts.ToPlaymodeString(playMode)+"= ? WHERE id = ?", TotalPP, UserID)
 }
