@@ -2,7 +2,6 @@ package calculate
 
 import (
 	"database/sql"
-	"fmt"
 	"math"
 	"sort"
 
@@ -22,7 +21,8 @@ func CalculateUser(UserID int, relaxing bool, playMode int8) {
 	Query += "GROUP BY FileMD5 ORDER BY MAX(Score) DESC"
 	rows, err := helpers.DB.Query(Query, UserID, playMode)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
+		return
 	}
 
 	pp := rowstoarray(rows)
@@ -50,7 +50,7 @@ func rowstoarray(r *sql.Rows) []float64 {
 		var i float64
 		err := r.Scan(&i)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorln(err)
 		}
 		o = append(o, i)
 	}

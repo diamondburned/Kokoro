@@ -28,7 +28,7 @@ func SearchDirect(w http.ResponseWriter, r *http.Request) {
 
 	if b, err := GetCache(RankedStatus + Page + Mode + Query); len(b) > 0 {
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Errorln(err)
 		} else {
 			w.Write(b)
 			return
@@ -62,7 +62,7 @@ func GETDirectSet(w http.ResponseWriter, r *http.Request) {
 
 	if b, err := GetCache(SetID + BeatmapID); len(b) > 0 {
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Errorln(err)
 		} else {
 			w.Write(b)
 			return

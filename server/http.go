@@ -28,13 +28,13 @@ func middleWare(next http.Handler) http.Handler {
 
 func unknownWeb(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.Info(" %s %s", r.Method, r.URL.Path)
+		logger.Infof("Method\n%s Path\n%s\n", r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
 }
 
 func webFolder(w http.ResponseWriter, r *http.Request) {
-	logger.Debug(r.URL.RawQuery)
+	logger.Debugln(r.URL.RawQuery)
 	w.Write([]byte("not yet"))
 }
 
@@ -58,6 +58,6 @@ func StartServer(host string, port int16) {
 	r.HandleFunc("/web/check-updates.php", handler.GETUpdates)
 	r.HandleFunc("/web/{web}", webFolder)
 
-	logger.Info(" Kokoro is listening on port %v\n", port)
+	logger.Infof("Kokoro is listening on port %v\n", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%v", host, port), r))
 }

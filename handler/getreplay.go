@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Gigamons/common/helpers"
+	"github.com/Gigamons/common/logger"
 
 	"github.com/Gigamons/common/tools/usertools"
 )
@@ -22,7 +23,8 @@ func GETreplaycompressed(w http.ResponseWriter, r *http.Request) {
 	Row := helpers.DB.QueryRow(Query, ScoreID)
 	err := Row.Scan(&Replay)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorln(err)
+		return
 	}
 	w.Write(Replay)
 }

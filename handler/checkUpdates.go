@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	"github.com/Gigamons/common/helpers"
+	"github.com/Gigamons/common/logger"
 )
 
 func GETUpdates(w http.ResponseWriter, r *http.Request) {
@@ -18,15 +19,9 @@ func GETUpdates(w http.ResponseWriter, r *http.Request) {
 
 	uri := url.URL{Host: "osu.ppy.sh", Path: "/web/check-updates.php"}
 
-	h, err := http.Get("https:" + uri.String() + "?" + r.URL.RawQuery)
+	b, err := helpers.Download("https:" + uri.String() + "?" + r.URL.RawQuery)
 	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	defer h.Body.Close()
-	b, err := ioutil.ReadAll(h.Body)
-	if err != nil {
-		fmt.Println(err)
+		logger.Errorln(err)
 		return
 	}
 	SetCache(Action+"Updater"+ReleaseStream, b, 86400)

@@ -148,8 +148,7 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(0)
 	if err != nil {
 		w.WriteHeader(500)
-		logger.Error(err.Error())
-		fmt.Println(err)
+		logger.Errorln(err)
 		return
 	}
 
@@ -184,7 +183,7 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 			DownloadedMap, err := helpers.DownloadBeatmapbyName(strconv.Itoa(Beatmap.BeatmapID))
 			if err != nil {
 				w.WriteHeader(408)
-				logger.Error(err.Error())
+				logger.Errorln(err)
 				return
 			}
 			GivePP := true
@@ -196,7 +195,7 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 				f, err := os.Open(DownloadedMap)
 				if err != nil {
 					w.WriteHeader(408)
-					logger.Error(err.Error())
+					logger.Errorln(err)
 					return
 				}
 				defer f.Close()
@@ -214,14 +213,14 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 			Replay, _, err := r.FormFile("score")
 			if err != nil {
 				w.WriteHeader(408)
-				logger.Error(err.Error())
+				logger.Errorln(err)
 				return
 			}
 			defer Replay.Close()
 			replay, err := ioutil.ReadAll(Replay)
 			if err != nil {
 				w.WriteHeader(408)
-				logger.Error(err.Error())
+				logger.Errorln(err)
 				return
 			}
 			h := md5.New()
@@ -230,14 +229,14 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 			err = insertScore(User, Beatmap, ScoreData, ReplayMD5, DaPP)
 			if err != nil {
 				w.WriteHeader(408)
-				logger.Error(err.Error())
+				logger.Errorln(err)
 				return
 			}
 			err = insertReplay(ScoreData, ReplayMD5, replay)
 			if err != nil {
 				w.WriteHeader(408)
 				deleteScore(ScoreData)
-				logger.Error(err.Error())
+				logger.Errorln(err)
 				return
 			}
 			//LeaderboardOLD := usertools.GetLeaderboard(*User, int8(ScoreData.PlayMode))
@@ -279,7 +278,7 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 			outputstring += "onlineScoreId:0|"
 			outputstring += "\n"
 
-			fmt.Println(outputstring)
+			logger.Debugln(outputstring)
 			fmt.Fprint(w, outputstring)
 		} else {
 			increaseTotalScore(User, ScoreData.Score, ScoreData.PlayMode)
@@ -292,15 +291,14 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 }
 
 func insertScore(u *consts.User, bm *helper.DBBeatmap, sd *scoredata, ReplayMD5 string, PP float64) error {
-	fmt.Println(sd.Count300, sd.Count100, sd.Count50, sd.CountMiss, sd.CountGeki, sd.CountKatu, sd.PlayMode)
-	fmt.Println(helpers.CalculateAccuracy(
+	logger.Debugln(sd.Count300, sd.Count100, sd.Count50, sd.CountMiss, sd.CountGeki, sd.CountKatu, sd.PlayMode)
+	logger.Debugln(helpers.CalculateAccuracy(
 		int64(sd.Count300), int64(sd.Count100),
 		int64(sd.Count50), int64(sd.CountMiss),
 		int64(sd.CountGeki), int64(sd.CountKatu),
 		int8(sd.PlayMode),
 	))
-	_, err := helpers.DB.Exec(
-		`
+	_, err := helpers.DB.Exec(`
 			INSERT INTO scores
 			(
 				UserID,

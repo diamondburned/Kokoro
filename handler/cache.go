@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"time"
+
+	"github.com/Gigamons/common/helpers"
 
 	"github.com/go-redis/redis"
 )
@@ -18,7 +18,11 @@ var CLIENT *redis.Client
 var CACHED []*Cache
 
 func SetCache(CacheKey string, CacheData []byte, Timeout int64) *Cache {
-	C := &Cache{CacheHash: hex.EncodeToString(md5.New().Sum([]byte(CacheKey))), DeleteCache: time.Now(), Timeout: Timeout}
+	k, err := helpers.MD5String(CacheKey)
+	if err != nil {
+		return nil
+	}
+	C := &Cache{CacheHash: string(k), DeleteCache: time.Now(), Timeout: Timeout}
 	if CLIENT.HSet(C.CacheHash, "Data", CacheData).Err() != nil {
 		return nil
 	}
@@ -27,9 +31,13 @@ func SetCache(CacheKey string, CacheData []byte, Timeout int64) *Cache {
 }
 
 func DelCache(CacheKey string) {
+	k, err := helpers.MD5String(CacheKey)
+	if err != nil {
+		return
+	}
 	for i := 0; i < len(CACHED); i++ {
-		if CACHED[i].CacheHash == hex.EncodeToString(md5.New().Sum([]byte(CacheKey))) {
-			CLIENT.HDel(hex.EncodeToString(md5.New().Sum([]byte(CacheKey))), "Data")
+		if CACHED[i].CacheHash == string(k) {
+			CLIENT.HDel(string(k), "Data")
 			copy(CACHED[i:], CACHED[i+1:])
 			CACHED[len(CACHED)-1] = nil
 			CACHED = CACHED[:len(CACHED)-1]
@@ -38,12 +46,15 @@ func DelCache(CacheKey string) {
 }
 
 func GetCache(CacheKey string) ([]byte, error) {
-	c := hex.EncodeToString(md5.New().Sum([]byte(CacheKey)))
-	b, err := CLIENT.HExists(c, "Data").Result()
-	if b && err == nil {
-		return CLIENT.HGet(c, "Data").Bytes()
+	k, err := helpers.MD5String(CacheKey)
+	if err != nil {
+		return nil, err
 	}
-	return []byte{}, err
+	b, err := CLIENT.HExists(string(k), "Data").Result()
+	if b && err == nil {
+		return CLIENT.HGet(string(k), "Data").Bytes()
+	}
+	return nil, err
 }
 
 func init() {

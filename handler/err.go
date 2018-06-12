@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
+
+	"github.com/Gigamons/common/logger"
 )
 
 func POSTosuerror(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.URL.RawPath)
+	logger.Debugln(r.URL.RawPath)
 	r.ParseMultipartForm(0)
 }

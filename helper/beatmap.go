@@ -121,7 +121,7 @@ func AddBeatmap(BM *Beatmap) {
 			child.MaxCombo,
 		)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorln(err)
 		}
 	}
 }
@@ -177,7 +177,7 @@ func UpdateBeatmap(BM *Beatmap) {
 			NewChild.BeatmapID,
 		)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorln(err)
 		}
 	}
 }
@@ -216,7 +216,7 @@ func GetBeatmapofDB(BeatmapID int) *DBBeatmap {
 		FROM beatmaps WHERE BeatmapID = ?`, BeatmapID)
 
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorln(err)
 		return nil
 	}
 
@@ -245,7 +245,7 @@ func GetBeatmapofDB(BeatmapID int) *DBBeatmap {
 			&bmDB.MaxCombo,
 		)
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Errorln(err)
 		}
 	}
 	defer rows.Close()
@@ -260,7 +260,7 @@ func GetBeatmapofDBHash(FileMD5 string) *DBBeatmap {
 		FROM beatmaps WHERE FileMD5 = ?`, FileMD5)
 
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorln(err)
 		return nil
 	}
 
@@ -289,7 +289,7 @@ func GetBeatmapofDBHash(FileMD5 string) *DBBeatmap {
 			&bmDB.MaxCombo,
 		)
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Errorln(err)
 			return nil
 		}
 	}

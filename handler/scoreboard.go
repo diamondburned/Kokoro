@@ -51,40 +51,40 @@ func GETScoreboard(w http.ResponseWriter, r *http.Request) {
 	FileMD5 := r.URL.Query().Get("c")
 	pm, err := strconv.Atoi(r.URL.Query().Get("m"))
 	if err != nil {
-		logger.Debug("Error while parsing mode")
+		logger.Debugln("Error while parsing mode")
 		fmt.Fprintf(w, "%v|false", consts.LatestPending)
 		return
 	}
 	sbt, err := strconv.Atoi(r.URL.Query().Get("v"))
 	if err != nil {
-		logger.Debug("Error while parsing Scoreboard Type")
+		logger.Debugln("Error while parsing Scoreboard Type")
 		fmt.Fprintf(w, "%v|false", consts.LatestPending)
 		return
 	}
 	sbv, err := strconv.Atoi(r.URL.Query().Get("vv"))
 	if err != nil {
-		logger.Debug("Error while parsing Scoreboard Version")
+		logger.Debugln("Error while parsing Scoreboard Version")
 		fmt.Fprintf(w, "%v|false", consts.LatestPending)
 		return
 	}
 	mods, err := strconv.Atoi(r.URL.Query().Get("mods"))
 	if err != nil {
-		logger.Debug("Error while parsing Mods")
+		logger.Debugln("Error while parsing Mods")
 		fmt.Fprintf(w, "%v|false", consts.LatestPending)
 		return
 	}
 	UserID := usertools.GetUserID(r.URL.Query().Get("us"))
 	if UserID < 0 {
-		logger.Debug("User Doesn't exists")
+		logger.Debugln("User Doesn't exists")
 		return
 	}
 	User := usertools.GetUser(UserID)
 	if User == nil {
-		logger.Debug("User Doesn't exists")
+		logger.Debugln("User Doesn't exists")
 		return
 	}
 	if !User.CheckPassword(r.URL.Query().Get("ha")) {
-		logger.Debug("User exists, but Password doesn't match.")
+		logger.Debugln("User exists, but Password doesn't match.")
 		return
 	}
 
@@ -93,13 +93,13 @@ func GETScoreboard(w http.ResponseWriter, r *http.Request) {
 		_Cheese := helper.CheeseGull{}
 		BM := _Cheese.GetBeatmapByHash(FileMD5)
 		if BM == nil {
-			logger.Debug("Beatmap not found.")
+			logger.Debugln("Beatmap not found.")
 			fmt.Fprintf(w, "%v|false", consts.LatestPending)
 			return
 		}
 		Set := _Cheese.GetSet(int(BM.ParentSetID))
 		if Set == nil {
-			logger.Debug("BeatmapSet not found.")
+			logger.Debugln("BeatmapSet not found.")
 			fmt.Fprintf(w, "%v|false", consts.LatestPending)
 			return
 		}
@@ -160,7 +160,7 @@ func (sb *Scoreboard) _SetPersonalBest() {
 
 	ScoreRows, err := helpers.DB.Query(QueryString, sb.User.ID, sb.Beatmap.FileMD5, sb.PlayMode)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
 		return
 	}
 	i := 0
@@ -189,12 +189,12 @@ func (sb *Scoreboard) _SetPersonalBest() {
 			&score.PP,
 		)
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Errorln(err)
 			continue
 		}
 		Date, err := time.Parse("2006-01-02 15:04:05", tmp)
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Errorln(err)
 			continue
 		}
 		score.Date = Date
@@ -209,12 +209,13 @@ func (s *Score) Position() int {
 	Pos := 0
 	rows, err := helpers.DB.Query("SELECT ScoreID, (SELECT COUNT(1) AS num FROM scores WHERE scores.Score > s1.Score AND FileMD5 = ?) + 1 AS rank FROM scores AS s1 WHERE FileMD5 = ? ORDER BY rank asc", s.FileMD5, s.FileMD5)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorln(err)
+		return 0
 	}
 	for rows.Next() {
 		tmp := 0
 		if err := rows.Scan(&tmp, &Pos); err != nil {
-			fmt.Println(err)
+			logger.Errorln(err)
 		}
 	}
 	return Pos
@@ -248,7 +249,7 @@ func (sb *Scoreboard) _SetScores() {
 
 	ScoreRows, err := helpers.DB.Query(QueryString, uInt32ToSInterface(sb.ScoreIDs)...)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
 		return
 	}
 
@@ -276,12 +277,12 @@ func (sb *Scoreboard) _SetScores() {
 			&score.PP,
 		)
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Errorln(err)
 			continue
 		}
 		Date, err := time.Parse("2006-01-02 15:04:05", tmp)
 		if err != nil {
-			logger.Error(err.Error())
+			logger.Errorln(err)
 			continue
 		}
 		score.Date = Date
@@ -309,16 +310,16 @@ func (sb *Scoreboard) _SetScoreIDs() {
 	}
 	QueryString += "GROUP BY UserID ORDER BY MAX(scores.Score) DESC LIMIT 100"
 
-	fmt.Println(antiInject(QueryString, sb.Beatmap.FileMD5, strconv.Itoa(int(sb.PlayMode)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.Mods)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.User.ID))))
+	logger.Debugln(antiInject(QueryString, sb.Beatmap.FileMD5, strconv.Itoa(int(sb.PlayMode)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.Mods)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.User.ID))))
 	Query, err := helpers.DB.Query(antiInject(QueryString, sb.Beatmap.FileMD5, strconv.Itoa(int(sb.PlayMode)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.Mods)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.User.ID))))
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorln(err)
 		return
 	}
 	for Query.Next() {
 		var s uint32
 		if err := Query.Scan(&s); err != nil {
-			fmt.Println(err)
+			logger.Errorln(err)
 		} else {
 			sb.ScoreIDs = append(sb.ScoreIDs, &s)
 		}

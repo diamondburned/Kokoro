@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/Gigamons/common/helpers"
+	"github.com/Gigamons/common/logger"
 	"github.com/Gigamons/oppai5"
 )
 
@@ -45,7 +46,8 @@ func getallusers() []int {
 		var i int
 		err := x.Scan(&i)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorln(err)
+			continue
 		}
 		r = append(r, i)
 	}
@@ -92,7 +94,8 @@ func RecalculateAllScores() {
 	)`
 	rows, err := helpers.DB.Query(query)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorln(err)
+		return
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -108,7 +111,7 @@ func RecalculateAllScores() {
 		var maxcombo uint16
 		err := rows.Scan(&id, &filemd5, &beatmapid, &maxcombo, &count300, &count100, &count50, &countmiss, &mods)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorln(err)
 			continue
 		}
 		if _, err = os.Stat(fmt.Sprintf("data/map/%s.osu", filemd5)); os.IsNotExist(err) {
@@ -116,7 +119,7 @@ func RecalculateAllScores() {
 		}
 		f, err := os.OpenFile(fmt.Sprintf("data/map/%s.osu", filemd5), os.O_RDONLY, 0644)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorln(err)
 			return
 		}
 		defer f.Close()
@@ -133,7 +136,7 @@ func RecalculateAllScores() {
 
 		_, err = helpers.DB.Exec("UPDATE scores SET PeppyPoints=? WHERE ScoreID=?", pp, id)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorln(err)
 		}
 	}
 }

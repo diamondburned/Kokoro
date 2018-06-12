@@ -63,22 +63,22 @@ func (c *CheeseGull) _search() {
 
 	api, err := http.Get(os.Getenv("CHEESEGULL") + "/search" + query)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
 		return
 	}
 	if api == nil {
-		logger.Error("URL not Valid!")
+		logger.Errorln("URL not Valid!")
 		return
 	}
 	defer api.Body.Close()
 	body, err := ioutil.ReadAll(api.Body)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
 		return
 	}
 	CheeseGullAnswer := []*Beatmap{}
 	if err = json.Unmarshal(body, &CheeseGullAnswer); err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
 		return
 	}
 	c.Beatmap = CheeseGullAnswer
@@ -87,25 +87,22 @@ func (c *CheeseGull) _search() {
 func (c *CheeseGull) GetSet(SetID int) *Beatmap {
 	api, err := http.Get(os.Getenv("CHEESEGULL") + "/s/" + strconv.Itoa(SetID))
 	if err != nil {
-		logger.Error(err.Error())
-		fmt.Println(err)
+		logger.Errorln(err)
 		return nil
 	}
 	if api == nil {
-		logger.Error("URL not Valid!")
+		logger.Errorln("URL not Valid!")
 		return nil
 	}
 	defer api.Body.Close()
 	body, err := ioutil.ReadAll(api.Body)
 	if err != nil {
-		logger.Error(err.Error())
-		fmt.Println(err)
+		logger.Errorln(err)
 		return nil
 	}
 	CheeseGullAnswer := NewBeatmap()
 	if err = json.Unmarshal(body, CheeseGullAnswer); err != nil {
-		logger.Error(err.Error())
-		fmt.Println(err)
+		logger.Errorln(err)
 		return nil
 	}
 
@@ -115,22 +112,22 @@ func (c *CheeseGull) GetSet(SetID int) *Beatmap {
 func (c *CheeseGull) GetBeatmap(BeatmapID int) *ChildrenBeatmaps {
 	api, err := http.Get(os.Getenv("CHEESEGULL") + "/b/" + strconv.Itoa(BeatmapID))
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
 		return nil
 	}
 	if api == nil {
-		logger.Error("URL not Valid!")
+		logger.Errorln("URL not Valid!")
 		return nil
 	}
 	defer api.Body.Close()
 	body, err := ioutil.ReadAll(api.Body)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
 		return nil
 	}
 	CheeseGullAnswer := NewChildrenBeatmap()
 	if err = json.Unmarshal(body, &CheeseGullAnswer); err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
 		return nil
 	}
 
@@ -140,22 +137,22 @@ func (c *CheeseGull) GetBeatmap(BeatmapID int) *ChildrenBeatmaps {
 func (c *CheeseGull) GetBeatmapByHash(FileMD5 string) *ChildrenBeatmaps {
 	api, err := http.Get(os.Getenv("CHEESEGULL") + "/hash/" + FileMD5)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
 		return nil
 	}
 	if api == nil {
-		logger.Error("URL not Valid!")
+		logger.Errorln("URL not Valid!")
 		return nil
 	}
 	defer api.Body.Close()
 	body, err := ioutil.ReadAll(api.Body)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
 		return nil
 	}
 	CheeseGullAnswer := NewChildrenBeatmap()
 	if err = json.Unmarshal(body, &CheeseGullAnswer); err != nil {
-		logger.Error(err.Error())
+		logger.Errorln(err)
 		return nil
 	}
 
