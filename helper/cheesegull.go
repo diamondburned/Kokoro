@@ -241,6 +241,9 @@ func (c *CheeseGull) ToDirect() string {
 	if len(c.Beatmap) <= 0 {
 		OutputString = "-1\nNo beatmaps found!"
 	}
+	if len(c.Beatmap) <= 0 && c.Query == "" {
+		OutputString = "-1\nWhoops, looks like osu!direct is down!"
+	}
 	return OutputString
 }
 

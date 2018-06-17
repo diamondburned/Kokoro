@@ -8,10 +8,9 @@ import (
 )
 
 func POSTosuerror(w http.ResponseWriter, r *http.Request) {
-	logger.Debugln(r.URL.RawPath)
 	r.ParseMultipartForm(0)
-	b := BodyReader(r)
-	logger.Debugln(b)
+	logger.Debugln(string(BodyReader(r)))
+	logger.Debugln(r.Form)
 }
 
 func BodyReader(r *http.Request) []byte {

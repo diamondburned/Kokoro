@@ -155,7 +155,7 @@ func (sb *Scoreboard) DisplayScoreboard() (out string) {
 			}
 			return 0
 		}()
-		out += fmt.Sprintf("%v|%s|%v|%v|%v|%v|%v|%v|%v|%v|%s|%v|%v|%v|%v|%v\n", s.ScoreID, sowner.UserName, s.Score, s.MaxCombo, s.Count50, s.Count100, s.Count300, s.CountGeki, s.CountMiss, s.CountKatu, fc, s.Mods, s.UserID, s.Position(), s.Date.Unix(), HasReplay)
+		out += fmt.Sprintf("%v|%s|%v|%v|%v|%v|%v|%v|%v|%v|%s|%v|%v|%v|%v|%v\n", s.ScoreID, strings.Replace(sowner.UserName, "|", "I", -1), s.Score, s.MaxCombo, s.Count50, s.Count100, s.Count300, s.CountGeki, s.CountMiss, s.CountKatu, fc, s.Mods, s.UserID, s.Position(), s.Date.Unix(), HasReplay)
 	}
 	return
 }
@@ -219,7 +219,7 @@ func (sb *Scoreboard) _SetPersonalBest() {
 
 func (s *Score) Position() int {
 	Pos := 0
-	rows, err := helpers.DB.Query("SELECT (SELECT COUNT(1) AS num FROM scores WHERE scores.Score > s1.Score AND FileMD5 = ?) + 1 AS rank FROM scores AS s1 WHERE FileMD5 = ? ORDER BY rank desc", s.FileMD5, s.FileMD5)
+	rows, err := helpers.DB.Query("SELECT (SELECT COUNT(1) AS num FROM scores WHERE scores.Score > s1.Score AND FileMD5 = ?) + 1 AS rank FROM scores AS s1 WHERE FileMD5 = ? AND UserID = ? ORDER BY rank desc", s.FileMD5, s.FileMD5, s.UserID)
 	if err != nil {
 		logger.Errorln(err)
 		return 0
@@ -229,7 +229,6 @@ func (s *Score) Position() int {
 			logger.Errorln(err)
 		}
 	}
-	logger.Debugln(antiInject("SELECT (SELECT COUNT(1) AS num FROM scores WHERE scores.Score > s1.Score AND FileMD5 = ?) + 1 AS rank FROM scores AS s1 WHERE FileMD5 = ? ORDER BY rank desc", s.FileMD5, s.FileMD5))
 	return Pos
 }
 
@@ -238,21 +237,6 @@ func antiInject(s string, arguments ...string) string {
 	for i := 0; i < len(arguments); i++ {
 		o = strings.Replace(o, "?", "'"+strings.Replace(arguments[i], "'", "\\'", -1)+"'", 1)
 	}
-	//  o := []rune{}
-	//  r := []rune(s)
-	//  qc := 0
-	//  for i := 0; i < len(r); i++ {
-	//  	if r[i] == '?' && len(arguments) >= qc {
-	//  		a := strings.Replace(arguments[qc], "'", "\\'", -1)
-	//  		z := "'" + a + "'"
-	//  		for x := 0; x < len([]rune(z)); x++ {
-	//  			o = append(o, []rune(z)[x])
-	//  		}
-	//  		qc++
-	//  	} else {
-	//  		o = append(o, r[i])
-	//  	}
-	//  }
 	return o
 }
 
@@ -320,9 +304,8 @@ func (sb *Scoreboard) _SetScoreIDs() {
 	} else {
 		QueryString += "AND (scores.Mods & 128 = 0 AND scores.Mods & 8192 = 0) "
 	}
-	QueryString += "GROUP BY UserID ORDER BY MAX(scores.Score) DESC LIMIT 100"
+	QueryString += "GROUP BY UserID ORDER BY Score DESC LIMIT 100"
 
-	logger.Debugln(antiInject(QueryString, sb.Beatmap.FileMD5, strconv.Itoa(int(sb.PlayMode)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.Mods)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.User.ID))))
 	Query, err := helpers.DB.Query(antiInject(QueryString, sb.Beatmap.FileMD5, strconv.Itoa(int(sb.PlayMode)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.Mods)), strconv.Itoa(int(sb.User.ID)), strconv.Itoa(int(sb.User.ID))))
 	if err != nil {
 		logger.Errorln(err)
@@ -330,8 +313,8 @@ func (sb *Scoreboard) _SetScoreIDs() {
 	}
 	for Query.Next() {
 		var s uint32
-		var tmp int64
-		if err := Query.Scan(&s, &tmp); err != nil {
+		var t uint32
+		if err := Query.Scan(&s, &t); err != nil {
 			logger.Errorln(err)
 		} else {
 			sb.ScoreIDs = append(sb.ScoreIDs, &s)

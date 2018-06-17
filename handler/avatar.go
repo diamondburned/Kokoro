@@ -16,10 +16,10 @@ func GETAvatar(w http.ResponseWriter, r *http.Request) {
 		avatar = "\x94\x82\xfc\x21fs9)01y.-cvm"
 	}
 	w.Header().Set("Content-Type", "image/png")
-	if helpers.NotExists("data/avatars/" + avatar) {
+	if helpers.NotExists("data/avatar/" + avatar) {
 		icon := identicon.New7x7([]byte("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"))
 		w.Write(icon.Render([]byte(avatar)))
 		return
 	}
-	http.ServeFile(w, r, "data/avatars/"+avatar)
+	http.ServeFile(w, r, "data/avatar/"+avatar)
 }

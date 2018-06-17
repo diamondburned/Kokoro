@@ -169,17 +169,11 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 		}
 		IsRanked := Beatmap.IsRanked()
 		IsLoved := Beatmap.IsLoved()
-
+		if GetScoreID(ScoreData.ScoreMD5) > 0 {
+			fmt.Fprintln(w, "error: dup")
+			return
+		}
 		if (IsRanked || IsLoved) && ScoreData.Pass {
-			increaseTotalScore(User, ScoreData.Score, ScoreData.PlayMode)
-			increasePlaycount(User, ScoreData.PlayMode)
-			if IsRanked {
-				increaseRankedScore(User, ScoreData.Score, ScoreData.PlayMode)
-			}
-			increaseCount300(User, ScoreData.Count300, ScoreData.PlayMode)
-			increaseCount100(User, ScoreData.Count100, ScoreData.PlayMode)
-			increaseCount50(User, ScoreData.Count50, ScoreData.PlayMode)
-			increaseCountMiss(User, ScoreData.CountMiss, ScoreData.PlayMode)
 			DownloadedMap, err := helpers.DownloadBeatmapbyName(strconv.Itoa(Beatmap.BeatmapID))
 			if err != nil {
 				w.WriteHeader(408)
@@ -226,6 +220,7 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 			h := md5.New()
 			h.Write(replay)
 			ReplayMD5 := hex.EncodeToString(h.Sum(nil))
+			positionold := Position(User.ID, Beatmap.FileMD5)
 			err = insertScore(User, Beatmap, ScoreData, ReplayMD5, DaPP)
 			if err != nil {
 				w.WriteHeader(408)
@@ -239,46 +234,72 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 				logger.Errorln(err)
 				return
 			}
-			//LeaderboardOLD := usertools.GetLeaderboard(*User, int8(ScoreData.PlayMode))
-			calculate.CalculateUser(int(User.ID), ScoreData.Mods&consts.ModsRX != 0 || ScoreData.Mods&consts.ModsRX2 != 0, int8(ScoreData.PlayMode))
-			//LeaderboardNEW := usertools.GetLeaderboard(*User, int8(ScoreData.PlayMode))
-			outputstring := ""
-			/* --- Beatmap --- */
-			outputstring += "beatmapid:" + strconv.Itoa(Beatmap.BeatmapID) + "|"
-			outputstring += "beatmapSetId:" + strconv.Itoa(Beatmap.SetID) + "|"
-			outputstring += "beatmapSetId:" + strconv.Itoa(Beatmap.SetID) + "|"
-			outputstring += "beatmapPlaycount:0|"
-			outputstring += "beatmapPasscount:0|"
-			outputstring += "approvedDate:" + Beatmap.RankedDate + "\n"
-			/* --- Charts --- */
-			outputstring += "chartId:overall|"
-			if ScoreData.Mods&consts.ModsRX != 0 || ScoreData.Mods&consts.ModsRX2 != 0 {
-				outputstring += "chartName:Relax Ranking|"
-			} else {
-				outputstring += "chartName:Overall Ranking|"
+			LeaderboardOLD := usertools.GetLeaderboard(User, int8(ScoreData.PlayMode))
+			increaseTotalScore(User, ScoreData.Score, ScoreData.PlayMode)
+			increasePlaycount(User, ScoreData.PlayMode)
+			if IsRanked {
+				increaseRankedScore(User, ScoreData.Score, ScoreData.PlayMode)
 			}
-			outputstring += "chartEndDate:|"
-			/* --- Ranking --- */
-			outputstring += "beatmapRankingBefore:0|"
-			outputstring += "beatmapRankingAfter:0|"
-			outputstring += "rankedScoreBefore:0|"
-			outputstring += "rankedScoreAfter:0|"
-			outputstring += "totalScoreBefore:0|"
-			outputstring += "totalScoreAfter:0|"
-			outputstring += "playCountBefore:0|"
-			outputstring += "accuracyBefore:0|"
-			outputstring += "accuracyAfter:0|"
-			outputstring += "rankBefore:0|"
-			outputstring += "rankAfter:0|"
-			outputstring += "toNextRank:0|"
-			outputstring += "toNextRankUser:0|"
-			/* --- Stats --- */
-			outputstring += "achievements:|"
-			outputstring += "achievements-new:|"
-			outputstring += "onlineScoreId:0|"
-			outputstring += "\n"
-
-			logger.Debugln(outputstring)
+			increaseCount300(User, ScoreData.Count300, ScoreData.PlayMode)
+			increaseCount100(User, ScoreData.Count100, ScoreData.PlayMode)
+			increaseCount50(User, ScoreData.Count50, ScoreData.PlayMode)
+			increaseCountMiss(User, ScoreData.CountMiss, ScoreData.PlayMode)
+			calculate.CalculateUser(int(User.ID), ScoreData.Mods&consts.ModsRX != 0 || ScoreData.Mods&consts.ModsRX2 != 0, int8(ScoreData.PlayMode))
+			LeaderboardNEW := usertools.GetLeaderboard(User, int8(ScoreData.PlayMode))
+			outputstring := toOsuString(
+				[]string{
+					"beatmapId",
+					"beatmapSetId",
+					"beatmapPlaycount",
+					"beatmapPasscount",
+					"approvedDate",
+					"chartId",
+					"chartName",
+					"chartEndDate",
+					"beatmapRankingBefore",
+					"beatmapRankingAfter",
+					"rankedScoreBefore",
+					"rankedScoreAfter",
+					"totalScoreBefore",
+					"totalScoreAfter",
+					"playCountBefore",
+					"accuracyBefore",
+					"accuracyAfter",
+					"rankBefore",
+					"rankAfter",
+					"toNextRank",
+					"toNextRankUser",
+					"achievements",
+					"achievements-new",
+					"onlineScoreId",
+				},
+				[]string{
+					strconv.Itoa(Beatmap.BeatmapID),
+					strconv.Itoa(Beatmap.SetID),
+					strconv.Itoa(0),
+					strconv.Itoa(0),
+					"\n",
+					"overall",
+					"Overall Ranking",
+					"",
+					strconv.Itoa(positionold),
+					strconv.Itoa(Position(User.ID, Beatmap.FileMD5)),
+					strconv.Itoa(int(LeaderboardOLD.RankedScore)),
+					strconv.Itoa(int(LeaderboardNEW.RankedScore)),
+					strconv.Itoa(int(LeaderboardOLD.TotalScore)),
+					strconv.Itoa(int(LeaderboardNEW.TotalScore)),
+					strconv.Itoa(int(LeaderboardNEW.Playcount)),
+					fmt.Sprintf("%.4f", helpers.CalculateAccuracy(LeaderboardOLD.Count300, LeaderboardOLD.Count100, LeaderboardOLD.Count50, LeaderboardOLD.CountMiss, 0, 0, 0)),
+					fmt.Sprintf("%.4f", helpers.CalculateAccuracy(LeaderboardNEW.Count300, LeaderboardNEW.Count100, LeaderboardNEW.Count50, LeaderboardNEW.CountMiss, 0, 0, 0)),
+					strconv.Itoa(int(LeaderboardOLD.Position)),
+					strconv.Itoa(int(LeaderboardNEW.Position)),
+					"0",
+					"",
+					"",
+					ClaimAchievement(User, ScoreData, Beatmap),
+					strconv.Itoa(GetScoreID(ScoreData.ScoreMD5)),
+				},
+			)
 			fmt.Fprint(w, outputstring)
 		} else {
 			increaseTotalScore(User, ScoreData.Score, ScoreData.PlayMode)
@@ -290,14 +311,49 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func GetScoreID(ScoreHash string) int {
+	row := helpers.DB.QueryRow("SELECT ScoreID FROM scores WHERE ScoreMD5 = ?", ScoreHash)
+	out := 0
+	row.Scan(&out)
+	return out
+}
+
+func Position(UserID int32, FileMD5 string) int {
+	Pos := 0
+	rows, err := helpers.DB.Query("SELECT (SELECT COUNT(1) AS num FROM scores WHERE scores.Score > s1.Score AND FileMD5 = ?) + 1 AS rank FROM scores AS s1 WHERE FileMD5 = ? AND UserID = ? ORDER BY rank desc", FileMD5, FileMD5, UserID)
+	if err != nil {
+		logger.Errorln(err)
+		return 0
+	}
+	for rows.Next() {
+		if err := rows.Scan(&Pos); err != nil {
+			logger.Errorln(err)
+		}
+	}
+	return Pos
+}
+
+func toOsuString(p []string, s []string) string {
+	out := ""
+	if len(p) != len(s) {
+		return out
+	}
+	for i := 0; i < len(p); i++ {
+		y := p[i]
+		x := s[i]
+		out += y + ":" + x
+		if x != "\n" {
+			if len(p)-1 != i {
+				out += "|"
+			} else {
+				out += "\n"
+			}
+		}
+	}
+	return out
+}
+
 func insertScore(u *consts.User, bm *helper.DBBeatmap, sd *scoredata, ReplayMD5 string, PP float64) error {
-	logger.Debugln(sd.Count300, sd.Count100, sd.Count50, sd.CountMiss, sd.CountGeki, sd.CountKatu, sd.PlayMode)
-	logger.Debugln(helpers.CalculateAccuracy(
-		int64(sd.Count300), int64(sd.Count100),
-		int64(sd.Count50), int64(sd.CountMiss),
-		int64(sd.CountGeki), int64(sd.CountKatu),
-		int8(sd.PlayMode),
-	))
 	_, err := helpers.DB.Exec(`
 			INSERT INTO scores
 			(
