@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	"github.com/Gigamons/Kokoro/api"
 	"github.com/Gigamons/Kokoro/handler"
 	"github.com/Gigamons/common/logger"
 	"github.com/gorilla/mux"
@@ -28,7 +29,7 @@ func middleWare(next http.Handler) http.Handler {
 
 func unknownWeb(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.Infof("Method\n%s Path\n%s\n", r.Method, r.URL.Path)
+		logger.Infof("Method\t%s Path\t%s\n", r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -57,6 +58,8 @@ func StartServer(host string, port int16) {
 
 	r.HandleFunc("/web/check-updates.php", handler.GETUpdates)
 	r.HandleFunc("/web/{web}", webFolder)
+
+	r.HandleFunc("/api/kokoro/addbeatmap", api.AddMap)
 
 	logger.Infof("Kokoro is listening on port %v\n", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%v", host, port), r))

@@ -88,6 +88,15 @@ func GETScoreboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	logger.Debugf(fmt.Sprintf("playMode%vbeatmap%sUser%v%sScoreboard%v%v%v%v", pm, FileMD5, User.ID, User.UserName, sbv, sbt, mods, pm))
+
+	if cache, err := GetCache(fmt.Sprintf("playMode%vbeatmap%sUser%v%sScoreboard%v%v%v%v", pm, FileMD5, User.ID, User.UserName, sbv, sbt, mods, pm)); err == nil && cache != nil && len(cache) > 2 {
+		w.Write(cache)
+		return
+	} else if err != nil {
+		logger.Errorln(err)
+	}
+
 	bm := helper.GetBeatmapofDBHash(FileMD5)
 	if bm == nil {
 		_Cheese := helper.CheeseGull{}
@@ -113,22 +122,24 @@ func GETScoreboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ScoreBoard := Scoreboard{Beatmap: bm, User: User, ScoreboardVersion: int8(sbv), Mods: uint16(mods), PlayMode: int8(pm), ScoreboardType: int8(sbt)}
-	ScoreBoard.DisplayScoreboard(w)
+	output := ScoreBoard.DisplayScoreboard()
+	SetCache(fmt.Sprintf("playMode%vbeatmap%sUser%v%sScoreboard%v%v%v%v", pm, FileMD5, User.ID, User.UserName, sbv, sbt, mods, pm), []byte(output), 120)
+	w.Write([]byte(output))
 }
 
-func (sb *Scoreboard) DisplayScoreboard(w http.ResponseWriter) {
+func (sb *Scoreboard) DisplayScoreboard() (out string) {
 	sb._SetScoreIDs()
 	if len(sb.ScoreIDs) > 0 {
 		sb._SetPersonalBest()
 		sb._SetScores()
 	}
 
-	fmt.Fprint(w, sb.Beatmap.GetHeader(len(sb.ScoreIDs)))
+	out += sb.Beatmap.GetHeader(len(sb.ScoreIDs))
 
 	for i := 0; i < len(sb.Scores); i++ {
 		s := sb.Scores[i]
 		if s == nil {
-			fmt.Fprint(w, "\n")
+			out += "\n"
 			return
 		}
 		sowner := usertools.GetUser(int(s.UserID))
@@ -144,8 +155,9 @@ func (sb *Scoreboard) DisplayScoreboard(w http.ResponseWriter) {
 			}
 			return 0
 		}()
-		fmt.Fprintf(w, "%v|%s|%v|%v|%v|%v|%v|%v|%v|%v|%s|%v|%v|%v|%v|%v\n", s.ScoreID, sowner.UserName, s.Score, s.MaxCombo, s.Count50, s.Count100, s.Count300, s.CountGeki, s.CountMiss, s.CountKatu, fc, s.Mods, s.UserID, s.Position(), s.Date.Unix(), HasReplay)
+		out += fmt.Sprintf("%v|%s|%v|%v|%v|%v|%v|%v|%v|%v|%s|%v|%v|%v|%v|%v\n", s.ScoreID, sowner.UserName, s.Score, s.MaxCombo, s.Count50, s.Count100, s.Count300, s.CountGeki, s.CountMiss, s.CountKatu, fc, s.Mods, s.UserID, s.Position(), s.Date.Unix(), HasReplay)
 	}
+	return
 }
 
 func (sb *Scoreboard) _SetPersonalBest() {
@@ -293,7 +305,7 @@ func (sb *Scoreboard) _SetScores() {
 
 func (sb *Scoreboard) _SetScoreIDs() {
 	sb._SetFriends()
-	QueryString := "SELECT ScoreID FROM scores STRAIGHT_JOIN users ON scores.UserID = users.id STRAIGHT_JOIN users_status ON users.id = users_status.id WHERE scores.FileMD5 = ? AND scores.PlayMode = ? AND (users_status.banned < 1 OR users.id = ?) "
+	QueryString := "SELECT ScoreID, MAX(scores.Score) FROM scores STRAIGHT_JOIN users ON scores.UserID = users.id STRAIGHT_JOIN users_status ON users.id = users_status.id WHERE scores.FileMD5 = ? AND scores.PlayMode = ? AND (users_status.banned < 1 OR users.id = ?) "
 	if sb.ScoreboardType == 4 {
 		QueryString += "AND users_status.country = (SELECT country FROM users_status WHERE id = ? LIMIT 1) "
 	}
@@ -318,7 +330,8 @@ func (sb *Scoreboard) _SetScoreIDs() {
 	}
 	for Query.Next() {
 		var s uint32
-		if err := Query.Scan(&s); err != nil {
+		var tmp int64
+		if err := Query.Scan(&s, &tmp); err != nil {
 			logger.Errorln(err)
 		} else {
 			sb.ScoreIDs = append(sb.ScoreIDs, &s)
@@ -335,7 +348,7 @@ func (sb *Scoreboard) _SetFriends() {
 	for FriendList.Next() {
 		var i uint32
 		if err := FriendList.Scan(&i); err != nil {
-			fmt.Println(err)
+			logger.Errorln(err)
 		} else {
 			res = append(res, &i)
 		}

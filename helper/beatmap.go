@@ -80,6 +80,7 @@ func AddBeatmap(BM *Beatmap) {
 				SetID,
 				BeatmapID,
 				FileMD5,
+				BeatmapFile,
 				RankedStatus,
 				RankedDate,
 				Artist,
@@ -100,11 +101,12 @@ func AddBeatmap(BM *Beatmap) {
 				PlayCount
 			)
 			VALUES
-			(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+			(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
 			`,
 			BM.SetID,
 			child.BeatmapID,
 			child.FileMD5,
+			BM.Artist+" - "+BM.Title+" ["+child.DiffName+"].osu",
 			FixRankedStatus(BM.RankedStatus),
 			BM.ApprovedDate,
 			BM.Artist,

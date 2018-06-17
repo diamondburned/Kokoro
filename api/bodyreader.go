@@ -1,4 +1,4 @@
-package handler
+package api
 
 import (
 	"io/ioutil"
@@ -6,13 +6,6 @@ import (
 
 	"github.com/Gigamons/common/logger"
 )
-
-func POSTosuerror(w http.ResponseWriter, r *http.Request) {
-	logger.Debugln(r.URL.RawPath)
-	r.ParseMultipartForm(0)
-	b := BodyReader(r)
-	logger.Debugln(b)
-}
 
 func BodyReader(r *http.Request) []byte {
 	b, err := ioutil.ReadAll(r.Body)

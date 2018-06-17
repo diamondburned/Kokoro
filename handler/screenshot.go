@@ -42,7 +42,7 @@ func POSTScreenshot(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		ioutil.WriteFile("data/screenshots/"+hex.EncodeToString(ha)[:8], f, 0644)
-		w.Write([]byte("https://gigamons.de/ss/" + hex.EncodeToString(ha)[:8]))
+		w.Write([]byte("https://osu.gigamons.de/ss/" + hex.EncodeToString(ha)[:8]))
 	} else {
 		w.Write([]byte("No"))
 	}
