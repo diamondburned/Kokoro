@@ -59,7 +59,15 @@ func (c *CheeseGull) _search() {
 		rstatus = strconv.Itoa(int(rankedStatus))
 	}
 
-	query := fmt.Sprintf("?mode=%v&amount=%v&offset=%v&status=%s&query=%s", c.PlayMode, 100, c.Page*100, rstatus, url.QueryEscape(c.Query))
+	query := fmt.Sprintf("?mode=%s&amount=%v&offset=%v&status=%s&query=%s", func() string {
+		fmt.Println(c.PlayMode)
+		if c.PlayMode < 0 || c.PlayMode > 3 {
+			return ""
+		}
+		return strconv.Itoa(int(c.PlayMode))
+	}(), 100, c.Page*100, rstatus, url.QueryEscape(c.Query))
+
+	fmt.Println(query)
 
 	api, err := http.Get(os.Getenv("CHEESEGULL") + "/search" + query)
 	if err != nil {
@@ -163,17 +171,15 @@ func (c *CheeseGull) ToDirect() string {
 	c._search()
 	OutputString := ""
 
-	if len(c.Beatmap) > 0 {
-		if len(c.Beatmap) >= 100 {
-			OutputString += "999"
-		} else {
-			OutputString += strconv.Itoa(len(c.Beatmap))
-		}
+	if len(c.Beatmap) >= 100 {
+		OutputString += "101"
 	} else {
-		OutputString += "0"
+		OutputString += strconv.Itoa(len(c.Beatmap))
 	}
 
 	OutputString += "\n"
+
+	logger.Debugln(OutputString)
 
 	if len(c.Beatmap) > 0 {
 		for i := 0; i < len(c.Beatmap); i++ {
@@ -186,16 +192,15 @@ func (c *CheeseGull) ToDirect() string {
 				}
 			}
 			MaxDiff += 3
-			MaxDiff = math.Round(MaxDiff)
 			// BeatmapSetID | Artist | Title | Creator | RankedStatus | MaxDiff | LastUpdate | SetID | SetID | HasVideo | 0 | 1234 | VideoLength
-			OutputString += fmt.Sprintf("%v.osz|%s|%s|%s|%v|%v|%s|%v|%v|%v|0|1234|%s|",
+			OutputString += fmt.Sprintf("%v.osz|%s|%s|%s|%v|%.2f|%s|%v|%v|%v|0|1234|%s|",
 				BMSet.SetID,
 				BMSet.Artist,
 				BMSet.Title,
 				BMSet.Creator,
 				BMSet.RankedStatus,
 				MaxDiff,
-				BMSet.LastChecked,
+				BMSet.LastUpdate.Format("2006-01-02T15:04:05Z"),
 				BMSet.SetID,
 				BMSet.SetID,
 				func() int {
@@ -226,18 +231,16 @@ func (c *CheeseGull) ToDirect() string {
 					BM.Mode,
 				)
 			}
-			OutputString += "\r\n"
+			if last := len(OutputString) - 1; last >= 0 && OutputString[last] == ',' {
+				OutputString = OutputString[:last] + "|"
+			}
+			OutputString += "\n"
 		}
 	}
 
-	if len(c.Beatmap) > 1 {
-		//if last := len(OutputString) - 1; last >= 0 && OutputString[last] == ',' {
-		//	OutputString = OutputString[:last]
-		//}
-	} else {
-		OutputString = "0\n"
+	if len(c.Beatmap) <= 0 {
+		OutputString = "-1\nNo beatmaps found!"
 	}
-	OutputString += "|"
 	return OutputString
 }
 

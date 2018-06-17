@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Gigamons/common/logger"
 
@@ -15,6 +16,7 @@ func SearchDirect(w http.ResponseWriter, r *http.Request) {
 	Query := r.URL.Query().Get("q")
 	Page := r.URL.Query().Get("p")
 	Mode := r.URL.Query().Get("m")
+	w.Header().Set("Content-Type", "text/plain;charset=utf-8")
 
 	if len(RankedStatus) < 1 {
 		return
@@ -35,6 +37,8 @@ func SearchDirect(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	Query = strings.Trim(Query, " ")
+
 	var err error
 	var rs int
 	var p int
@@ -45,7 +49,7 @@ func SearchDirect(w http.ResponseWriter, r *http.Request) {
 	if p, err = strconv.Atoi(Page); err != nil {
 		return
 	}
-	if m, err = strconv.Atoi(RankedStatus); err != nil {
+	if m, err = strconv.Atoi(Mode); err != nil {
 		return
 	}
 
@@ -95,6 +99,5 @@ func GETDirectSet(w http.ResponseWriter, r *http.Request) {
 	if out == "0" {
 		return
 	}
-
 	fmt.Fprint(w, out)
 }

@@ -219,17 +219,17 @@ func (sb *Scoreboard) _SetPersonalBest() {
 
 func (s *Score) Position() int {
 	Pos := 0
-	rows, err := helpers.DB.Query("SELECT ScoreID, (SELECT COUNT(1) AS num FROM scores WHERE scores.Score > s1.Score AND FileMD5 = ?) + 1 AS rank FROM scores AS s1 WHERE FileMD5 = ? ORDER BY rank asc", s.FileMD5, s.FileMD5)
+	rows, err := helpers.DB.Query("SELECT (SELECT COUNT(1) AS num FROM scores WHERE scores.Score > s1.Score AND FileMD5 = ?) + 1 AS rank FROM scores AS s1 WHERE FileMD5 = ? ORDER BY rank desc", s.FileMD5, s.FileMD5)
 	if err != nil {
 		logger.Errorln(err)
 		return 0
 	}
 	for rows.Next() {
-		tmp := 0
-		if err := rows.Scan(&tmp, &Pos); err != nil {
+		if err := rows.Scan(&Pos); err != nil {
 			logger.Errorln(err)
 		}
 	}
+	logger.Debugln(antiInject("SELECT (SELECT COUNT(1) AS num FROM scores WHERE scores.Score > s1.Score AND FileMD5 = ?) + 1 AS rank FROM scores AS s1 WHERE FileMD5 = ? ORDER BY rank desc", s.FileMD5, s.FileMD5))
 	return Pos
 }
 
