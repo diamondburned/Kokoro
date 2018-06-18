@@ -46,7 +46,7 @@ func main() {
 		logger.Errorln("Could not connect to Redis Server!")
 		return
 	}
-	handler.CLIENT.FlushAll()
+	handler.CLIENT.FlushDB()
 	defer handler.CLIENT.Close()
 
 	if _, err := os.Stat("data"); os.IsNotExist(err) {

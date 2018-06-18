@@ -296,7 +296,13 @@ func POSTSubmitModular(w http.ResponseWriter, r *http.Request) {
 					"0",
 					"",
 					"",
-					ClaimAchievement(User, ScoreData, Beatmap),
+					func() string {
+						if ScoreData.Mods&consts.ModsRX != 0 || ScoreData.Mods&consts.ModsRX2 != 0 {
+							ClaimbutNoDisplayAchivement(User, ScoreData, Beatmap)
+							return ""
+						}
+						return ClaimAchievement(User, ScoreData, Beatmap)
+					}(),
 					strconv.Itoa(GetScoreID(ScoreData.ScoreMD5)),
 				},
 			)
