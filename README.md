@@ -24,3 +24,7 @@ unknown.
 
 * Remove unknown, and change to actual text
 * Finish documentation
+* Port to go-chi
+* Refactor code to use `diamondburned/oppai5`
+* Work on a site frontend
+* Go modules
